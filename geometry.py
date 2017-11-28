@@ -33,6 +33,8 @@ class Ray:
     def __init__(self, loc, dir):
         self.location = loc
         self.direction = dir
+    def __str__(self):
+        return str(self.location) + " " + str(self.direction)
 
 Plane = namedtuple("Plane", "location direction")
 Triangle = namedtuple("Triangle", "a b c, color")
@@ -54,17 +56,17 @@ def rayToVector(r):
     return r.direction + r.location
 def isBounded(p, bounds, n, t):
     p = rayToVector(p) * t
-    if ((bounds.a - p) ** (bounds.b - bounds.a)) * n > 0:
-        if ((bounds.b - p) ** (bounds.c - bounds.b)) * n > 0:
-            if ((bounds.c - p) ** (bounds.a - bounds.c)) * n > 0:
+    if ((bounds.b - bounds.a) ** (p - bounds.a)) * n > 0:
+        if ((bounds.c - bounds.b) ** (p - bounds.b)) * n > 0:
+            if ((bounds.a - bounds.c) ** (p - bounds.c)) * n > 0:
                 return True
-    if ((bounds.a - p) ** (bounds.b - bounds.a)) * n < 0:
-        if ((bounds.b - p) ** (bounds.c - bounds.b)) * n < 0:
-            if ((bounds.c - p) ** (bounds.a - bounds.c)) * n < 0:
+    if ((bounds.b - bounds.a) ** (p - bounds.a)) * n < 0:
+        if ((bounds.c - bounds.b) ** (p - bounds.b)) * n < 0:
+            if ((bounds.a - bounds.c) ** (p - bounds.c)) * n < 0:
                 return True
     return False
 def triToPlane(triangle):
-    normal = (triangle.b - triangle.a) ** (triangle.c - triangle.a)
+    normal = (triangle.a - triangle.b) ** (triangle.b - triangle.c)
     return normal * (1/sqrt(normal.x ** 2 + normal.y ** 2 + normal.z ** 2))
 def rayCast(ray, triangles, primary = True, self = None):
     shortest = 100000
@@ -79,10 +81,11 @@ def rayCast(ray, triangles, primary = True, self = None):
                 if intersection(p, ray) < shortest:
                     shortest = time
                     if primary:
-                        secondT = rayCast(Ray(rayToVector(ray) * time, Vector(-1, 1, 0)), triangles, False, triangle)
-                        if secondT[1] > 1e-15 and secondT[1] != 100000:
-                            if str(secondT[0]) == "255 0 0" and str(triangle.color) == "0 255 0":
-                                print(secondT[1])
+                        secondT = rayCast(Ray(Vector(-100, -100, 0), (rayToVector(ray) * time + p.direction * 1e-4) - Vector(-100, -100, 0)), triangles, False, triangle)
+                        if secondT[1] != 100000:
+                            if str(secondT[0]) == "255 0 0" and str(triangle.color) == "0 255 255":
+                                #print(str(Ray(rayToVector(ray) * time + p.direction * 1e-3, Vector(-1, 1, 0))))
+                                pass
                             color = secondT[0] #triangle.color - Vector(100, 100, 100)
                         else:
                             color = triangle.color 
@@ -102,10 +105,10 @@ def render(height, width, fov, tris):
             result.append(rayCast(Ray(Vector(0, 0, 0), Vector(pixelScreen[0], pixelScreen[1], 1)), tris)[0])
     return result
 
-t = Triangle(Vector(0, -3, 6), Vector(3, -3, 3), Vector(3, 3, 3), Vector(255, 0, 0))
+t = Triangle(Vector(3, 3, 3), Vector(3, -3, 3), Vector(0, -3, 6), Vector(255, 0, 0))
 tt = Triangle(Vector(0, -3, 6), Vector(0, 3, 6), Vector(3, 3, 3), Vector(0, 255, 0))
 ttt = Triangle(Vector(0, 3, 5), Vector(0, 3, 3), Vector(3, 3, 3), Vector(0, 0, 255))
-floor = Triangle(Vector(-10, -3, -10), Vector(30, -3, 0), Vector(-10, -3, 10), Vector(0, 255, 255))
+floor = Triangle(Vector(-10, -3, 10), Vector(30, -3, 0), Vector(-10, -3, -10), Vector(0, 255, 255))
 #tt = Triangle(Vector(-1, -1, -1000), Vector(1, 0, -1000), Vector(1, 1, -1000))
 p = Vector(0.6, 2, 0.4)
 scene = list(map(lambda a: str(a), render(200, 200, pi / 3.5, [t, tt, ttt, floor])))
