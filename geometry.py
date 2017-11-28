@@ -81,7 +81,7 @@ def rayCast(ray, triangles, primary = True, self = None):
                 if intersection(p, ray) < shortest:
                     shortest = time
                     if primary:
-                        secondT = rayCast(Ray(Vector(-100, -100, 0), (rayToVector(ray) * time + p.direction * 1e-4) - Vector(-100, -100, 0)), triangles, False, triangle)
+                        secondT = rayCast(Ray(Vector(100, -100, 0), (rayToVector(ray) * time + p.direction * 0) - Vector(100, -100, 0)), triangles, False, triangle)
                         if secondT[1] != 100000:
                             if str(secondT[0]) == "255 0 0" and str(triangle.color) == "0 255 255":
                                 #print(str(Ray(rayToVector(ray) * time + p.direction * 1e-3, Vector(-1, 1, 0))))
