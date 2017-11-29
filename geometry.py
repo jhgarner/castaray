@@ -2,6 +2,8 @@ from collections import namedtuple
 from math import tan
 from math import pi
 from math import sqrt
+import curses
+import time
 
 class Vector:
     x: float
@@ -43,13 +45,15 @@ class Ray:
     def __str__(self):
         return str(self.location) + " " + str(self.direction)
 
-#Basically classes without functions
+#Basically classes without functions and actual type checking
 Plane = namedtuple("Plane", "location direction")
 Triangle = namedtuple("Triangle", "a b c color")
 
+#Returns the time when a ray intersects a plane. Could be positive, negative, or throw an error
 def intersection(plane, ray):
     return (plane.location - ray.location) * plane.direction / (ray.direction * plane.direction)
 
+#Uses intersection to determine if a ray collides with a plane while moving forwards
 def colliding(plane, ray):
     try:
         t = intersection(plane, ray)
@@ -60,25 +64,30 @@ def colliding(plane, ray):
     except:
         return False
 
+#Converts a ray to a simple vector
 def rayToVector(r, t = 1):
     return r.direction * t + r.location
 
+#Determines if a given point (given through a vector and a time) is inside of a triangle.
 def isBounded(q, bounds, n, t):
     p = rayToVector(q, t)
     if ((bounds.b - bounds.a) ** (p - bounds.a)) * n > 0:
         if ((bounds.c - bounds.b) ** (p - bounds.b)) * n > 0:
             if ((bounds.a - bounds.c) ** (p - bounds.c)) * n > 0:
                 return True
+    #Checks if it collides from the other direction
     if ((bounds.b - bounds.a) ** (p - bounds.a)) * n < 0:
         if ((bounds.c - bounds.b) ** (p - bounds.b)) * n < 0:
             if ((bounds.a - bounds.c) ** (p - bounds.c)) * n < 0:
                 return True
     return False
 
+#Converts a triangle to a plane with normalized normal
 def triToPlane(triangle):
     normal = (triangle.a - triangle.b) ** (triangle.b - triangle.c)
     return normal * (1/sqrt(normal.x ** 2 + normal.y ** 2 + normal.z ** 2))
 
+#Fires a ray and finds the triangle it first intersects
 def launchRay(ray, triangles):
     shortest = 100000
     color = Vector(0, 0, 0)
@@ -93,7 +102,7 @@ def launchRay(ray, triangles):
                     tri = triangle
     return (shortest, tri)
 
-
+#Given a ray and some triangles, determines a color based on shadows and colors
 def rayCast(ray, triangles):
     (time, tri) = launchRay(ray, triangles)
     color = Vector(0, 0, 0)
@@ -111,6 +120,7 @@ def rayCast(ray, triangles):
 
     return color
 
+#Creates a ray for every pixel on the screen
 def render(height, width, fov, tris):
     result = []
     hstep = 1 / height
@@ -126,17 +136,82 @@ t = Triangle(Vector(3, 3, 3), Vector(3, -3, 3), Vector(0, -3, 6), Vector(255, 0,
 tt = Triangle(Vector(0, -3, 6), Vector(0, 3, 6), Vector(3, 3, 3), Vector(0, 255, 0))
 ttt = Triangle(Vector(0, 3, 5), Vector(0, 3, 3), Vector(3, 3, 3), Vector(0, 0, 255))
 floor = Triangle(Vector(-10, -3, 10), Vector(30, -3, 0), Vector(-10, -3, -10), Vector(0, 255, 255))
-#tt = Triangle(Vector(-1, -1, -1000), Vector(1, 0, -1000), Vector(1, 1, -1000))
-p = Vector(0.6, 2, 0.4)
-scene = list(map(lambda a: str(a), render(200, 200, pi / 3.5, [t, tt, ttt, floor])))
-print("P3")
-print("200 200")
-print("255")
+
 def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
-for line in chunker(scene, 200):
-    #l = map(lambda a: "1" if a != "100000" else "0", line)
-    print(" ".join(line))
-    pass
-#print(list(filter(lambda a: a != 100000, render(10, 10, pi / 4, [t]))))
-#print(rayCast(Ray(Vector(0,0,0), p), [t]))
+
+def initColors():
+        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_BLUE, curses.COLOR_BLACK)
+        curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_BLACK)
+
+def main(stdscr):
+    initColors()
+    pad = curses.newpad(curses.LINES + 1, curses.COLS + 1)
+    # Clear screen
+    stdscr.clear()
+    scene = render(curses.LINES, curses.COLS, pi/4, [t, tt, ttt, floor])
+    loc = [0, 0]
+    lines = list(chunker(scene, curses.COLS))
+    for l in lines:
+        loc[0] = 0
+        for c in l:
+            color = 1
+            brightness = 0
+            char = " "
+            if c.x != 0 and c.y != 0 and c.z != 0:
+                color = 0
+                brightness = c.x
+            elif c.x != 0 and c.y != 0 and c.z == 0:
+                color = 1
+                brightness = c.x
+            elif c.x != 0 and c.y == 0 and c.z == 0:
+                color = 2
+                brightness = c.x
+            elif c.x == 0 and c.y != 0 and c.z != 0:
+                color = 3
+                brightness = c.z
+            elif c.x == 0 and c.y != 0 and c.z == 0:
+                color = 4
+                brightness = c.y
+            elif c.x != 0 and c.y == 0 and c.z != 0:
+                color = 5
+                brightness = c.z
+            elif c.x == 0 and c.y == 0 and c.z != 0:
+                color = 6
+                brightness = c.z
+            elif c.x == 0 and c.y == 0 and c.z == 0:
+                color = 7
+                brightness = 0
+
+            if brightness > 200:
+                char = "@"
+            elif brightness > 0:
+                char = ":"
+
+            pad.addstr(loc[1], loc[0], char, curses.color_pair(color))
+            stdscr.refresh()
+            pad.refresh(0, 0, 0, 0, curses.LINES-1, curses.COLS-1)
+            stdscr.refresh()
+            loc[0] += 1
+        loc[1] += 1
+
+    stdscr.refresh()
+    pad.refresh(0, 0, 0, 0, curses.LINES-1, curses.COLS-1)
+    stdscr.refresh()
+    stdscr.getkey()
+
+curses.wrapper(main)
+
+# p = Vector(0.6, 2, 0.4)
+# scene = list(map(lambda a: str(a), render(64, 112, pi / 4, [t, tt, ttt, floor])))
+# print("P3")
+# print("112 64")
+# print("255")
+# for line in chunker(scene, 112):
+#     print(" ".join(line))
+#     pass
