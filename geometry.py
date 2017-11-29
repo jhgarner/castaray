@@ -79,7 +79,7 @@ def triToPlane(triangle):
     normal = (triangle.a - triangle.b) ** (triangle.b - triangle.c)
     return normal * (1/sqrt(normal.x ** 2 + normal.y ** 2 + normal.z ** 2))
 
-def rayCast(ray, triangles, primary = True, self = None):
+def launchRay(ray, triangles):
     shortest = 100000
     color = Vector(0, 0, 0)
     tri = None
@@ -91,17 +91,25 @@ def rayCast(ray, triangles, primary = True, self = None):
                 if intersection(p, ray) < shortest:
                     shortest = time
                     tri = triangle
-                    if primary:
-                        secondT = rayCast(Ray(rayToVector(ray, time) + p.direction * 1e-4, Vector(-2, 5, 4) - (rayToVector(ray, time) + p.direction * 1e-4)), triangles, False, triangle)
-                        if secondT[1] != 100000:
-                            color = triangle.color - Vector(150, 150, 150)
-                        else:
-                            color = triangle.color 
-                    else:
-                        color = triangle.color 
-    if color.y < 0 or color.z < 0 or color.x < 0:
-        color = Vector(max(color.x, 0), max(color.y, 0), max(color.z, 0))
-    return (color, shortest, tri)
+    return (shortest, tri)
+
+
+def rayCast(ray, triangles, primary = True, self = None):
+    (time, tri) = launchRay(ray, triangles)
+    color = Vector(0, 0, 0)
+    if time != 100000:
+        p = Plane(tri.a, triToPlane(tri))
+        secondT = launchRay(Ray(rayToVector(ray, time) + p.direction * 1e-4, Vector(-2, 5, 4) - (rayToVector(ray, time) + p.direction * 1e-4)), triangles)
+
+        if secondT[0] != 100000:
+            color = tri.color - Vector(150, 150, 150)
+        else:
+            color = tri.color 
+
+        if color.y < 0 or color.z < 0 or color.x < 0:
+            color = Vector(max(color.x, 0), max(color.y, 0), max(color.z, 0))
+
+    return color
 
 def render(height, width, fov, tris):
     result = []
@@ -111,7 +119,7 @@ def render(height, width, fov, tris):
     for h in range(0,height):
         for w in range(0,width):
             pixelScreen = ((((w + 0.5) * wstep) * 2 - 1) * aspectRatio * tan(fov), (1 - ((h + 0.5) * hstep) * 2) * tan(fov))
-            result.append(rayCast(Ray(Vector(0, 0, 0), Vector(pixelScreen[0], pixelScreen[1], 1)), tris)[0])
+            result.append(rayCast(Ray(Vector(0, 0, 0), Vector(pixelScreen[0], pixelScreen[1], 1)), tris))
     return result
 
 t = Triangle(Vector(3, 3, 3), Vector(3, -3, 3), Vector(0, -3, 6), Vector(255, 0, 0))
