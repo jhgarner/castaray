@@ -60,11 +60,11 @@ def colliding(plane, ray):
     except:
         return False
 
-def rayToVector(r):
-    return r.direction + r.location
+def rayToVector(r, t = 1):
+    return r.direction * t + r.location
 
-def isBounded(p, bounds, n, t):
-    p = rayToVector(p) * t
+def isBounded(q, bounds, n, t):
+    p = rayToVector(q, t)
     if ((bounds.b - bounds.a) ** (p - bounds.a)) * n > 0:
         if ((bounds.c - bounds.b) ** (p - bounds.b)) * n > 0:
             if ((bounds.a - bounds.c) ** (p - bounds.c)) * n > 0:
@@ -81,11 +81,9 @@ def triToPlane(triangle):
 
 def rayCast(ray, triangles, primary = True, self = None):
     shortest = 100000
-    color = Vector(255, 255, 255)
+    color = Vector(0, 0, 0)
     tri = None
     for triangle in triangles:
-        if triangle == self:
-            pass
         p = Plane(triangle.a, triToPlane(triangle))
         if colliding(p, ray):
             time = intersection(p, ray)
@@ -94,9 +92,9 @@ def rayCast(ray, triangles, primary = True, self = None):
                     shortest = time
                     tri = triangle
                     if primary:
-                        secondT = rayCast(Ray(Vector(-1000, 100, 100), (rayToVector(ray) * time + p.direction * 0) - Vector(-1000, 100, 100)), triangles, False, triangle)
-                        if secondT[1] != 100000 and triangle != secondT[2]:
-                            color = triangle.color - Vector(100, 100, 100)
+                        secondT = rayCast(Ray(rayToVector(ray, time) + p.direction * 1e-4, Vector(-2, 5, 4) - (rayToVector(ray, time) + p.direction * 1e-4)), triangles, False, triangle)
+                        if secondT[1] != 100000:
+                            color = triangle.color - Vector(150, 150, 150)
                         else:
                             color = triangle.color 
                     else:
