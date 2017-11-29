@@ -141,20 +141,53 @@ def chunker(seq, size):
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 def initColors():
-        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
-        curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
-        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-        curses.init_pair(6, curses.COLOR_BLUE, curses.COLOR_BLACK)
-        curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_BLACK)
+    curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+    curses.init_pair(6, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_BLACK)
+
+def loadImages(fileName):
+    with open(fileName) as f:
+        tris = f.readlines()
+        return list(map(lambda a: stringToTri(a), tris))
+
+def stringToTri(s):
+    split = list(map(lambda a: stringToVector(a), s.split(",")))
+    return Triangle(split[0], split[1], split[2], split[3])
+
+def stringToVector(s):
+    split = s.split(" ")
+    return Vector(float(split[0]), float(split[1]), float(split[2]))
+
+def getUserInput(stdscr):
+    key = stdscr.getch()
+    if key == 10:
+        return ""
+    else:
+        return chr(key) + getUserInput(stdscr)
+    pass
 
 def main(stdscr):
-    initColors()
-    pad = curses.newpad(curses.LINES + 1, curses.COLS + 1)
-    # Clear screen
     stdscr.clear()
-    scene = render(curses.LINES, curses.COLS, pi/4, [t, tt, ttt, floor])
+    initColors()
+
+    #Get user input
+    curses.echo()
+    stdscr.addstr(3, 0, "Enter a file name for the scene:")
+    stdscr.move(4, 0)
+    tris = loadImages(getUserInput(stdscr))
+    curses.noecho()
+    stdscr.clear()
+    stdscr.addstr(3, 0, "Rendering...")
+    stdscr.refresh()
+
+    # Prepare and render
+    pad = curses.newpad(curses.LINES + 1, curses.COLS + 1)
+    scene = render(curses.LINES, curses.COLS, pi/4, tris)
+    stdscr.clear()
     loc = [0, 0]
     lines = list(chunker(scene, curses.COLS))
     for l in lines:
@@ -194,9 +227,6 @@ def main(stdscr):
                 char = ":"
 
             pad.addstr(loc[1], loc[0], char, curses.color_pair(color))
-            stdscr.refresh()
-            pad.refresh(0, 0, 0, 0, curses.LINES-1, curses.COLS-1)
-            stdscr.refresh()
             loc[0] += 1
         loc[1] += 1
 
