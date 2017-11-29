@@ -94,7 +94,7 @@ def launchRay(ray, triangles):
     return (shortest, tri)
 
 
-def rayCast(ray, triangles, primary = True, self = None):
+def rayCast(ray, triangles):
     (time, tri) = launchRay(ray, triangles)
     color = Vector(0, 0, 0)
     if time != 100000:
