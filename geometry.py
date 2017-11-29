@@ -162,27 +162,35 @@ def stringToVector(s):
     split = s.split(" ")
     return Vector(float(split[0]), float(split[1]), float(split[2]))
 
-def getUserInput(stdscr):
+def getKeyboardInput(stdscr):
     key = stdscr.getch()
     if key == 10:
         return ""
     else:
-        return chr(key) + getUserInput(stdscr)
+        return chr(key) + getKeyboardInput(stdscr)
     pass
+
+def getUserInput(stdscr, preText = " "):
+    try:
+        stdscr.clear()
+        curses.echo()
+        stdscr.addstr(2, 0, preText)
+        stdscr.addstr(3, 0, "Enter a file name for the scene:")
+        stdscr.move(4, 0)
+        tris = loadImages(getKeyboardInput(stdscr))
+        curses.noecho()
+        stdscr.clear()
+        stdscr.addstr(3, 0, "Rendering...")
+        stdscr.refresh()
+        return tris
+    except:
+        return getUserInput(stdscr, "Invalid file")
 
 def main(stdscr):
     stdscr.clear()
     initColors()
 
-    #Get user input
-    curses.echo()
-    stdscr.addstr(3, 0, "Enter a file name for the scene:")
-    stdscr.move(4, 0)
-    tris = loadImages(getUserInput(stdscr))
-    curses.noecho()
-    stdscr.clear()
-    stdscr.addstr(3, 0, "Rendering...")
-    stdscr.refresh()
+    tris = getUserInput(stdscr)
 
     # Prepare and render
     pad = curses.newpad(curses.LINES + 1, curses.COLS + 1)
