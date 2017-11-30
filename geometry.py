@@ -71,9 +71,9 @@ def rayToVector(r, t = 1):
 #Determines if a given point (given through a vector and a time) is inside of a triangle.
 def isBounded(q, bounds, n, t):
     p = rayToVector(q, t)
-    if ((bounds.b - bounds.a) ** (p - bounds.a)) * n > 0:
-        if ((bounds.c - bounds.b) ** (p - bounds.b)) * n > 0:
-            if ((bounds.a - bounds.c) ** (p - bounds.c)) * n > 0:
+    if ((bounds.b - bounds.a) ** (p - bounds.a)) * n >= 0:
+        if ((bounds.c - bounds.b) ** (p - bounds.b)) * n >= 0:
+            if ((bounds.a - bounds.c) ** (p - bounds.c)) * n >= 0:
                 return True
     #Checks if it collides from the other direction
     if ((bounds.b - bounds.a) ** (p - bounds.a)) * n < 0:
@@ -103,12 +103,12 @@ def launchRay(ray, triangles):
     return (shortest, tri)
 
 #Given a ray and some triangles, determines a color based on shadows and colors
-def rayCast(ray, triangles):
+def rayCast(ray, triangles, light):
     (time, tri) = launchRay(ray, triangles)
     color = Vector(0, 0, 0)
     if time != 100000:
         p = Plane(tri.a, triToPlane(tri))
-        secondT = launchRay(Ray(rayToVector(ray, time) + p.direction * 1e-4, Vector(-2, 5, 4) - (rayToVector(ray, time) + p.direction * 1e-4)), triangles)
+        secondT = launchRay(Ray(rayToVector(ray, time) + p.direction * 1e-4, light - (rayToVector(ray, time) + p.direction * 1e-4)), triangles)
 
         if secondT[0] != 100000:
             color = tri.color - Vector(150, 150, 150)
@@ -121,7 +121,7 @@ def rayCast(ray, triangles):
     return color
 
 #Creates a ray for every pixel on the screen
-def render(height, width, fov, tris):
+def render(height, width, fov, tris, light):
     result = []
     hstep = 1 / height
     wstep = 1 / width
@@ -129,7 +129,7 @@ def render(height, width, fov, tris):
     for h in range(0,height):
         for w in range(0,width):
             pixelScreen = ((((w + 0.5) * wstep) * 2 - 1) * aspectRatio * tan(fov), (1 - ((h + 0.5) * hstep) * 2) * tan(fov))
-            result.append(rayCast(Ray(Vector(0, 0, 0), Vector(pixelScreen[0], pixelScreen[1], 1)), tris))
+            result.append(rayCast(Ray(Vector(0, 0, 0), Vector(pixelScreen[0], pixelScreen[1], 1)), tris, light))
     return result
 
 t = Triangle(Vector(3, 3, 3), Vector(3, -3, 3), Vector(0, -3, 6), Vector(255, 0, 0))
@@ -152,7 +152,7 @@ def initColors():
 def loadImages(fileName):
     with open(fileName) as f:
         tris = f.readlines()
-        return list(map(lambda a: stringToTri(a), tris))
+        return (list(map(lambda a: stringToTri(a), tris[1:])), stringToVector(tris[0]))
 
 def stringToTri(s):
     split = list(map(lambda a: stringToVector(a), s.split(",")))
@@ -177,12 +177,12 @@ def getUserInput(stdscr, preText = " "):
         stdscr.addstr(2, 0, preText)
         stdscr.addstr(3, 0, "Enter a file name for the scene:")
         stdscr.move(4, 0)
-        tris = loadImages(getKeyboardInput(stdscr))
+        lightAndTris = loadImages(getKeyboardInput(stdscr))
         curses.noecho()
         stdscr.clear()
         stdscr.addstr(3, 0, "Rendering...")
         stdscr.refresh()
-        return tris
+        return lightAndTris
     except:
         return getUserInput(stdscr, "Invalid file")
 
@@ -190,11 +190,11 @@ def main(stdscr):
     stdscr.clear()
     initColors()
 
-    tris = getUserInput(stdscr)
+    (tris, light) = getUserInput(stdscr)
 
     # Prepare and render
     pad = curses.newpad(curses.LINES + 1, curses.COLS + 1)
-    scene = render(curses.LINES, curses.COLS, pi/4, tris)
+    scene = render(curses.LINES, curses.COLS, pi/4, tris, light)
     stdscr.clear()
     loc = [0, 0]
     lines = list(chunker(scene, curses.COLS))
@@ -244,12 +244,3 @@ def main(stdscr):
     stdscr.getkey()
 
 curses.wrapper(main)
-
-# p = Vector(0.6, 2, 0.4)
-# scene = list(map(lambda a: str(a), render(64, 112, pi / 4, [t, tt, ttt, floor])))
-# print("P3")
-# print("112 64")
-# print("255")
-# for line in chunker(scene, 112):
-#     print(" ".join(line))
-#     pass
