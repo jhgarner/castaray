@@ -115,8 +115,7 @@ def rayCast(ray, triangles, light):
         else:
             color = tri.color 
 
-        if color.y < 0 or color.z < 0 or color.x < 0:
-            color = Vector(max(color.x, 0), max(color.y, 0), max(color.z, 0))
+        color = Vector(max(color.x, 0), max(color.y, 0), max(color.z, 0))
 
     return color
 
